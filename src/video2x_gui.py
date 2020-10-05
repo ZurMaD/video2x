@@ -4,7 +4,7 @@
 Creator: Video2X GUI
 Author: K4YT3X
 Date Created: May 5, 2020
-Last Modified: June 30, 2020
+Last Modified: September 13, 2020
 """
 
 # local imports
@@ -15,7 +15,6 @@ from wrappers.ffmpeg import Ffmpeg
 
 # built-in imports
 import contextlib
-import datetime
 import json
 import mimetypes
 import os
@@ -34,7 +33,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import magic
 
-GUI_VERSION = '2.7.1'
+GUI_VERSION = '2.8.0'
 
 LEGAL_INFO = f'''Video2X GUI Version: {GUI_VERSION}\\
 Upscaler Version: {UPSCALER_VERSION}\\
@@ -51,6 +50,9 @@ AVAILABLE_DRIVERS = {
     'RealSR NCNN Vulkan': 'realsr_ncnn_vulkan',
     'Anime4KCPP': 'anime4kcpp'
 }
+
+# get current working directory before it is changed by drivers
+CWD = pathlib.Path.cwd()
 
 
 def resource_path(relative_path: str) -> pathlib.Path:
@@ -192,8 +194,10 @@ class Video2XMainWindow(QMainWindow):
         super().__init__(*args, **kwargs)
         uic.loadUi(str(resource_path('video2x_gui.ui')), self)
 
-        # generate log file name
-        self.logfile = pathlib.Path(__file__).parent.absolute() / f'video2x_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log'
+        # redirect output to both terminal and log file
+        self.log_file = tempfile.TemporaryFile(mode='a+', suffix='.log', prefix='video2x_', encoding='utf-8')
+        sys.stdout = BiLogger(sys.stdout, self.log_file)
+        sys.stderr = BiLogger(sys.stderr, self.log_file)
 
         # create thread pool for upscaler workers
         self.threadpool = QThreadPool()
@@ -248,7 +252,7 @@ class Video2XMainWindow(QMainWindow):
         # select output file/folder
         self.output_line_edit = self.findChild(QLineEdit, 'outputLineEdit')
         self.enable_line_edit_file_drop(self.output_line_edit)
-        self.output_line_edit.setText(str((pathlib.Path().cwd() / 'output').absolute()))
+        self.output_line_edit.setText(str((CWD / 'output').absolute()))
         self.output_select_file_button = self.findChild(QPushButton, 'outputSelectFileButton')
         self.output_select_file_button.clicked.connect(self.select_output_file)
         self.output_select_folder_button = self.findChild(QPushButton, 'outputSelectFolderButton')
@@ -277,11 +281,14 @@ class Video2XMainWindow(QMainWindow):
         self.driver_combo_box.currentTextChanged.connect(self.update_gui_for_driver)
         self.processes_spin_box = self.findChild(QSpinBox, 'processesSpinBox')
         self.scale_ratio_double_spin_box = self.findChild(QDoubleSpinBox, 'scaleRatioDoubleSpinBox')
+        self.output_width_spin_box = self.findChild(QSpinBox, 'outputWidthSpinBox')
+        self.output_width_spin_box.valueChanged.connect(self.mutually_exclude_scale_ratio_resolution)
+        self.output_height_spin_box = self.findChild(QSpinBox, 'outputHeightSpinBox')
+        self.output_height_spin_box.valueChanged.connect(self.mutually_exclude_scale_ratio_resolution)
         self.output_file_name_format_string_line_edit = self.findChild(QLineEdit, 'outputFileNameFormatStringLineEdit')
         self.image_output_extension_line_edit = self.findChild(QLineEdit, 'imageOutputExtensionLineEdit')
         self.video_output_extension_line_edit = self.findChild(QLineEdit, 'videoOutputExtensionLineEdit')
         self.preserve_frames_check_box = self.findChild(QCheckBox, 'preserveFramesCheckBox')
-        self.disable_logging_check_box = self.findChild(QCheckBox, 'disableLoggingCheckBox')
 
         # frame preview
         self.frame_preview_show_preview_check_box = self.findChild(QCheckBox, 'framePreviewShowPreviewCheckBox')
@@ -310,8 +317,6 @@ class Video2XMainWindow(QMainWindow):
         self.enable_line_edit_file_drop(self.waifu2x_caffe_path_line_edit)
         self.waifu2x_caffe_path_select_button = self.findChild(QPushButton, 'waifu2xCaffePathSelectButton')
         self.waifu2x_caffe_path_select_button.clicked.connect(lambda: self.select_driver_binary_path(self.waifu2x_caffe_path_line_edit))
-        self.waifu2x_caffe_scale_width_spin_box = self.findChild(QSpinBox, 'waifu2xCaffeScaleWidthSpinBox')
-        self.waifu2x_caffe_scale_height_spin_box = self.findChild(QSpinBox, 'waifu2xCaffeScaleHeightSpinBox')
         self.waifu2x_caffe_mode_combo_box = self.findChild(QComboBox, 'waifu2xCaffeModeComboBox')
         self.waifu2x_caffe_noise_level_spin_box = self.findChild(QSpinBox, 'waifu2xCaffeNoiseLevelSpinBox')
         self.waifu2x_caffe_process_combo_box = self.findChild(QComboBox, 'waifu2xCaffeProcessComboBox')
@@ -395,6 +400,11 @@ class Video2XMainWindow(QMainWindow):
         self.anime4kcpp_post_processing_check_box = self.findChild(QCheckBox, 'anime4kCppPostProcessingCheckBox')
         self.anime4kcpp_gpu_mode_check_box = self.findChild(QCheckBox, 'anime4kCppGpuModeCheckBox')
         self.anime4kcpp_cnn_mode_check_box = self.findChild(QCheckBox, 'anime4kCppCnnModeCheckBox')
+        self.anime4kcpp_hdn_check_box = self.findChild(QCheckBox, 'anime4kCppHdnCheckBox')
+        self.anime4kcpp_hdn_level_spin_box = self.findChild(QSpinBox, 'anime4kCppHdnLevelSpinBox')
+        self.anime4kcpp_force_fps_double_spin_box = self.findChild(QDoubleSpinBox, 'anime4kCppForceFpsDoubleSpinBox')
+        self.anime4kcpp_disable_progress_check_box = self.findChild(QCheckBox, 'anime4kCppDisableProgressCheckBox')
+        self.anime4kcpp_alpha_check_box = self.findChild(QCheckBox, 'anime4kCppAlphaCheckBox')
 
         # FFmpeg settings
         # global options
@@ -437,8 +447,6 @@ class Video2XMainWindow(QMainWindow):
         self.gifski_path_line_edit = self.findChild(QLineEdit, 'gifskiPathLineEdit')
         self.enable_line_edit_file_drop(self.gifski_path_line_edit)
         self.gifski_quality_spin_box = self.findChild(QSpinBox, 'gifskiQualitySpinBox')
-        self.gifski_width_spin_box = self.findChild(QSpinBox, 'gifskiWidthSpinBox')
-        self.gifski_height_spin_box = self.findChild(QSpinBox, 'gifskiHeightSpinBox')
         self.gifski_fast_check_box = self.findChild(QCheckBox, 'gifskiFastCheckBox')
         self.gifski_once_check_box = self.findChild(QCheckBox, 'gifskiOnceCheckBox')
         self.gifski_quiet_check_box = self.findChild(QCheckBox, 'gifskiQuietCheckBox')
@@ -486,8 +494,6 @@ class Video2XMainWindow(QMainWindow):
 
         # waifu2x-caffe
         settings = self.config['waifu2x_caffe']
-        self.waifu2x_caffe_scale_width_spin_box.setValue(settings['scale_width'])
-        self.waifu2x_caffe_scale_height_spin_box.setValue(settings['scale_height'])
         self.waifu2x_caffe_path_line_edit.setText(str(pathlib.Path(os.path.expandvars(settings['path'])).absolute()))
         self.waifu2x_caffe_mode_combo_box.setCurrentText(settings['mode'])
         self.waifu2x_caffe_noise_level_spin_box.setValue(settings['noise_level'])
@@ -557,6 +563,11 @@ class Video2XMainWindow(QMainWindow):
         self.anime4kcpp_post_processing_check_box.setChecked(settings['postprocessing'])
         self.anime4kcpp_gpu_mode_check_box.setChecked(settings['GPUMode'])
         self.anime4kcpp_cnn_mode_check_box.setChecked(settings['CNNMode'])
+        self.anime4kcpp_hdn_check_box.setChecked(settings['HDN'])
+        self.anime4kcpp_hdn_level_spin_box.setValue(settings['HDNLevel'])
+        self.anime4kcpp_force_fps_double_spin_box.setValue(settings['forceFps'])
+        self.anime4kcpp_disable_progress_check_box.setChecked(settings['disableProgress'])
+        self.anime4kcpp_alpha_check_box.setChecked(settings['alpha'])
 
         # ffmpeg
         # global options
@@ -585,9 +596,6 @@ class Video2XMainWindow(QMainWindow):
         settings = self.config['gifski']
         self.gifski_path_line_edit.setText(str(pathlib.Path(os.path.expandvars(settings['gifski_path'])).absolute()))
         self.gifski_quality_spin_box.setValue(settings['quality'])
-        if isinstance(settings['width'], int) and isinstance(settings['height'], int):
-            self.gifski_width_spin_box.setValue(settings['width'])
-            self.gifski_height_spin_box.setValue(settings['height'])
         self.gifski_fast_check_box.setChecked(settings['fast'])
         self.gifski_once_check_box.setChecked(settings['once'])
         self.gifski_quiet_check_box.setChecked(settings['quiet'])
@@ -595,15 +603,13 @@ class Video2XMainWindow(QMainWindow):
     def resolve_driver_settings(self):
 
         # waifu2x-caffe
-        self.config['waifu2x_caffe']['scale_width'] = self.waifu2x_caffe_scale_width_spin_box.value()
-        self.config['waifu2x_caffe']['scale_height'] = self.waifu2x_caffe_scale_height_spin_box.value()
         self.config['waifu2x_caffe']['path'] = os.path.expandvars(self.waifu2x_caffe_path_line_edit.text())
         self.config['waifu2x_caffe']['mode'] = self.waifu2x_caffe_mode_combo_box.currentText()
         self.config['waifu2x_caffe']['noise_level'] = self.waifu2x_caffe_noise_level_spin_box.value()
         self.config['waifu2x_caffe']['process'] = self.waifu2x_caffe_process_combo_box.currentText()
         self.config['waifu2x_caffe']['model_dir'] = str((pathlib.Path(self.config['waifu2x_caffe']['path']).parent / 'models' / self.waifu2x_caffe_model_combobox.currentText()).absolute())
         self.config['waifu2x_caffe']['crop_size'] = self.waifu2x_caffe_crop_size_spin_box.value()
-        self.config['waifu2x_caffe']['output_quality'] = self.waifu2x_caffe_output_depth_spin_box.value()
+        self.config['waifu2x_caffe']['output_quality'] = self.waifu2x_caffe_output_quality_spin_box.value()
         self.config['waifu2x_caffe']['output_depth'] = self.waifu2x_caffe_output_depth_spin_box.value()
         self.config['waifu2x_caffe']['batch_size'] = self.waifu2x_caffe_batch_size_spin_box.value()
         self.config['waifu2x_caffe']['gpu'] = self.waifu2x_caffe_gpu_spin_box.value()
@@ -666,6 +672,11 @@ class Video2XMainWindow(QMainWindow):
         self.config['anime4kcpp']['postprocessing'] = bool(self.anime4kcpp_post_processing_check_box.isChecked())
         self.config['anime4kcpp']['GPUMode'] = bool(self.anime4kcpp_gpu_mode_check_box.isChecked())
         self.config['anime4kcpp']['CNNMode'] = bool(self.anime4kcpp_cnn_mode_check_box.isChecked())
+        self.config['anime4kcpp']['HDN'] = bool(self.anime4kcpp_hdn_check_box.isChecked())
+        self.config['anime4kcpp']['HDNLevel'] = self.anime4kcpp_hdn_level_spin_box.value()
+        self.config['anime4kcpp']['forceFps'] = self.anime4kcpp_force_fps_double_spin_box.value()
+        self.config['anime4kcpp']['disableProgress'] = bool(self.anime4kcpp_disable_progress_check_box.isChecked())
+        self.config['anime4kcpp']['alpha'] = bool(self.anime4kcpp_alpha_check_box.isChecked())
 
         # ffmpeg
         self.config['ffmpeg']['ffmpeg_path'] = os.path.expandvars(self.ffmpeg_path_line_edit.text())
@@ -727,7 +738,8 @@ class Video2XMainWindow(QMainWindow):
 
         self.config['ffmpeg']['migrate_streams']['output_options']['-pix_fmt'] = self.ffmpeg_migrate_streams_output_options_pixel_format_line_edit.text()
 
-        if (fps := self.ffmpeg_migrate_streams_output_options_frame_interpolation_spin_box.value()) > 0:
+        fps = self.ffmpeg_migrate_streams_output_options_frame_interpolation_spin_box.value()
+        if fps > 0:
             if ('-vf' in self.config['ffmpeg']['migrate_streams']['output_options'] and
                     len(self.config['ffmpeg']['migrate_streams']['output_options']['-vf']) > 0 and
                     'minterpolate=' not in self.config['ffmpeg']['migrate_streams']['output_options']['-vf']):
@@ -764,12 +776,6 @@ class Video2XMainWindow(QMainWindow):
         # Gifski
         self.config['gifski']['gifski_path'] = os.path.expandvars(self.gifski_path_line_edit.text())
         self.config['gifski']['quality'] = self.gifski_quality_spin_box.value()
-        if self.gifski_width_spin_box.value() > 0 and self.gifski_height_spin_box.value() > 0:
-            self.config['gifski']['width'] = self.gifski_width_spin_box.value()
-            self.config['gifski']['height'] = self.gifski_height_spin_box.value()
-        else:
-            self.config['gifski']['width'] = None
-            self.config['gifski']['height'] = None
         self.config['gifski']['fast'] = self.gifski_fast_check_box.isChecked()
         self.config['gifski']['once'] = self.gifski_once_check_box.isChecked()
         self.config['gifski']['quiet'] = self.gifski_quiet_check_box.isChecked()
@@ -816,6 +822,12 @@ class Video2XMainWindow(QMainWindow):
         with open(config_file, 'r') as config:
             return yaml.load(config, Loader=yaml.FullLoader)
 
+    def mutually_exclude_scale_ratio_resolution(self):
+        if self.output_width_spin_box.value() != 0 or self.output_height_spin_box.value() != 0:
+            self.scale_ratio_double_spin_box.setDisabled(True)
+        elif self.output_width_spin_box.value() == 0 and self.output_height_spin_box.value() == 0:
+            self.scale_ratio_double_spin_box.setDisabled(False)
+
     def mutually_exclude_frame_interpolation_stream_copy(self):
         if self.ffmpeg_migrate_streams_output_options_frame_interpolation_spin_box.value() > 0:
             self.ffmpeg_migrate_streams_output_options_copy_streams_check_box.setChecked(False)
@@ -826,24 +838,6 @@ class Video2XMainWindow(QMainWindow):
 
     def update_gui_for_driver(self):
         current_driver = AVAILABLE_DRIVERS[self.driver_combo_box.currentText()]
-
-        # update scale ratio constraints
-        if current_driver in ['waifu2x_caffe', 'waifu2x_converter_cpp', 'anime4kcpp']:
-            self.scale_ratio_double_spin_box.setMinimum(0.0)
-            self.scale_ratio_double_spin_box.setMaximum(999.0)
-            self.scale_ratio_double_spin_box.setValue(2.0)
-        elif current_driver == 'waifu2x_ncnn_vulkan':
-            self.scale_ratio_double_spin_box.setMinimum(1.0)
-            self.scale_ratio_double_spin_box.setMaximum(2.0)
-            self.scale_ratio_double_spin_box.setValue(2.0)
-        elif current_driver == 'srmd_ncnn_vulkan':
-            self.scale_ratio_double_spin_box.setMinimum(2.0)
-            self.scale_ratio_double_spin_box.setMaximum(4.0)
-            self.scale_ratio_double_spin_box.setValue(2.0)
-        elif current_driver == 'realsr_ncnn_vulkan':
-            self.scale_ratio_double_spin_box.setMinimum(4.0)
-            self.scale_ratio_double_spin_box.setMaximum(4.0)
-            self.scale_ratio_double_spin_box.setValue(4.0)
 
         # update preferred processes/threads count
         if current_driver == 'anime4kcpp':
@@ -889,6 +883,12 @@ class Video2XMainWindow(QMainWindow):
             return None
         return pathlib.Path(folder_selected)
 
+    def select_save_file(self, *args, **kwargs) -> pathlib.Path:
+        save_file_selected = QFileDialog.getSaveFileName(self, *args, **kwargs)
+        if not isinstance(save_file_selected, tuple) or save_file_selected[0] == '':
+            return None
+        return pathlib.Path(save_file_selected[0])
+
     def update_output_path(self):
         # if input list is empty
         # clear output path
@@ -898,7 +898,7 @@ class Video2XMainWindow(QMainWindow):
         # if there are multiple output files
         # use cwd/output directory for output
         elif len(self.input_table_data) > 1:
-            self.output_line_edit.setText(str((pathlib.Path.cwd() / 'output').absolute()))
+            self.output_line_edit.setText(str((CWD / 'output').absolute()))
 
         # if there's only one input file
         # generate output file/directory name automatically
@@ -963,44 +963,49 @@ class Video2XMainWindow(QMainWindow):
                 self.output_line_edit.setText(str(output_path.absolute()))
 
     def select_input_file(self):
-        if ((input_file := self.select_file('Select Input File')) is None or
-                self.input_table_path_exists(input_file)):
+        input_file = self.select_file('Select Input File')
+        if (input_file is None or self.input_table_path_exists(input_file)):
             return
         self.input_table_data.append(input_file)
         self.update_output_path()
         self.update_input_table()
 
     def select_input_folder(self):
-        if ((input_folder := self.select_folder('Select Input Folder')) is None or
-                self.input_table_path_exists(input_folder)):
+        input_folder = self.select_folder('Select Input Folder')
+        if (input_folder is None or self.input_table_path_exists(input_folder)):
             return
         self.input_table_data.append(input_folder)
         self.update_output_path()
         self.update_input_table()
 
     def select_output_file(self):
-        if (output_file := self.select_file('Select Output File')) is None:
+        output_file = self.select_file('Select Output File')
+        if output_file is None:
             return
         self.output_line_edit.setText(str(output_file.absolute()))
 
     def select_output_folder(self):
-        if (output_folder := self.select_folder('Select Output Folder')) is None:
+        output_folder = self.select_folder('Select Output Folder')
+        if output_folder is None:
             return
         self.output_line_edit.setText(str(output_folder.absolute()))
 
     def select_cache_folder(self):
-        if (cache_folder := self.select_folder('Select Cache Folder')) is None:
+        cache_folder = self.select_folder('Select Cache Folder')
+        if cache_folder is None:
             return
         self.cache_line_edit.setText(str(cache_folder.absolute()))
 
     def select_config_file(self):
-        if (config_file := self.select_file('Select Config File', filter='(YAML files (*.yaml))')) is None:
+        config_file = self.select_file('Select Config File', filter='(YAML files (*.yaml))')
+        if config_file is None:
             return
         self.config_line_edit.setText(str(config_file.absolute()))
         self.load_configurations()
 
     def select_driver_binary_path(self, driver_line_edit: QLineEdit):
-        if (driver_binary_path := self.select_file('Select Driver Binary File')) is None:
+        driver_binary_path = self.select_file('Select Driver Binary File')
+        if driver_binary_path is None:
             return
         driver_line_edit.setText(str(driver_binary_path.absolute()))
 
@@ -1040,6 +1045,16 @@ class Video2XMainWindow(QMainWindow):
         message_box.exec_()
 
     def show_error(self, exception: Exception):
+
+        def _process_button_press(button_pressed):
+            # if the user pressed the save button, save log file to destination
+            if button_pressed.text() == 'Save':
+                log_file_saving_path = self.select_save_file('Select Log File Saving Destination', 'video2x_error.log')
+                if log_file_saving_path is not None:
+                    with open(log_file_saving_path, 'w', encoding='utf-8') as log_file:
+                        self.log_file.seek(0)
+                        log_file.write(self.log_file.read())
+
         # QErrorMessage(self).showMessage(message.replace('\n', '<br>'))
         message_box = QMessageBox(self)
         message_box.setWindowTitle('Error')
@@ -1048,48 +1063,63 @@ class Video2XMainWindow(QMainWindow):
 
         error_message = '''Upscaler ran into an error:\\
 {}\\
-Check the console output for details.\\
-When reporting an error, please include console output.\\
+Check the console output or the log file for details.\\
 You can [submit an issue on GitHub](https://github.com/k4yt3x/video2x/issues/new?assignees=K4YT3X&labels=bug&template=bug-report.md&title={}) to report this error.\\
-It\'s also highly recommended for you to attach the [log file]({}) under the programs\'s parent folder named {}.'''
-        message_box.setText(error_message.format(exception, urllib.parse.quote(str(exception)), self.logfile.as_uri(), self.logfile.name))
+It\'s highly recommended to attach the log file.\\
+You can click \"Save\" to save the log file.'''
+        message_box.setText(error_message.format(exception, urllib.parse.quote(str(exception))))
+
+        message_box.setStandardButtons(QMessageBox.Save | QMessageBox.Close)
+        message_box.setDefaultButton(QMessageBox.Save)
+        message_box.buttonClicked.connect(_process_button_press)
         message_box.exec_()
 
     def progress_monitor(self, progress_callback: pyqtSignal):
 
         # initialize progress bar values
-        upscale_begin_time = time.time()
-        progress_callback.emit((upscale_begin_time, 0, 0, 0, 0, pathlib.Path(), pathlib.Path()))
+        progress_callback.emit((time.time(), 0, 0, 0, 0, 0, [], pathlib.Path(), pathlib.Path()))
 
         # keep querying upscaling process and feed information to callback signal
         while self.upscaler.running:
 
-            progress_callback.emit((upscale_begin_time,
+            progress_callback.emit((self.upscaler.current_processing_starting_time,
                                     self.upscaler.total_frames_upscaled,
                                     self.upscaler.total_frames,
                                     self.upscaler.total_processed,
                                     self.upscaler.total_files,
+                                    self.upscaler.current_pass,
+                                    self.upscaler.scaling_jobs,
                                     self.upscaler.current_input_file,
                                     self.upscaler.last_frame_upscaled))
             time.sleep(1)
 
         # upscale process will stop at 99%
         # so it's set to 100 manually when all is done
-        # progress_callback.emit((upscale_begin_time, 0, 0, 0, 0, pathlib.Path(), pathlib.Path()))
+        progress_callback.emit((time.time(),
+                                self.upscaler.total_frames,
+                                self.upscaler.total_frames,
+                                self.upscaler.total_files,
+                                self.upscaler.total_files,
+                                len(self.upscaler.scaling_jobs),
+                                self.upscaler.scaling_jobs,
+                                pathlib.Path(),
+                                pathlib.Path()))
 
     def set_progress(self, progress_information: tuple):
-        upscale_begin_time = progress_information[0]
+        current_processing_starting_time = progress_information[0]
         total_frames_upscaled = progress_information[1]
         total_frames = progress_information[2]
         total_processed = progress_information[3]
         total_files = progress_information[4]
-        current_input_file = progress_information[5]
-        last_frame_upscaled = progress_information[6]
+        current_pass = progress_information[5]
+        scaling_jobs = progress_information[6]
+        current_input_file = progress_information[7]
+        last_frame_upscaled = progress_information[8]
 
         # calculate fields based on frames and time elapsed
-        time_elapsed = time.time() - upscale_begin_time
+        time_elapsed = time.time() - current_processing_starting_time
         try:
-            rate = total_frames_upscaled / (time.time() - upscale_begin_time)
+            rate = total_frames_upscaled / time_elapsed
             time_remaining = (total_frames - total_frames_upscaled) / rate
         except Exception:
             rate = 0.0
@@ -1105,7 +1135,7 @@ It\'s also highly recommended for you to attach the [log file]({}) under the pro
         self.overall_progress_label.setText('Overall Progress: {}/{}'.format(total_processed, total_files))
         self.overall_progress_bar.setMaximum(total_files)
         self.overall_progress_bar.setValue(total_processed)
-        self.currently_processing_label.setText('Currently Processing: {}'.format(str(current_input_file.name)))
+        self.currently_processing_label.setText('Currently Processing: {} (pass {}/{})'.format(str(current_input_file.name), current_pass, len(scaling_jobs)))
 
         # if show frame is checked, show preview image
         if self.frame_preview_show_preview_check_box.isChecked() and last_frame_upscaled.is_file():
@@ -1156,11 +1186,6 @@ It\'s also highly recommended for you to attach the [log file]({}) under the pro
                 self.show_warning('Output path unspecified')
                 return
 
-            if self.disable_logging_check_box.isChecked() is False:
-                print(f'Redirecting console logs to {self.logfile}', file=sys.stderr)
-                sys.stdout = BiLogger(sys.stdout, self.logfile)
-                sys.stderr = BiLogger(sys.stderr, self.logfile)
-
             if len(self.input_table_data) == 1:
                 input_directory = self.input_table_data[0]
             else:
@@ -1175,6 +1200,16 @@ It\'s also highly recommended for you to attach the [log file]({}) under the pro
             # load driver settings for the current driver
             self.driver_settings = self.config[AVAILABLE_DRIVERS[self.driver_combo_box.currentText()]]
 
+            # get scale ratio or resolution
+            if self.scale_ratio_double_spin_box.isEnabled():
+                scale_ratio = self.scale_ratio_double_spin_box.value()
+                scale_width = scale_height = None
+
+            else:
+                scale_ratio = None
+                scale_width = self.output_width_spin_box.value()
+                scale_height = self.output_height_spin_box.value()
+
             self.upscaler = Upscaler(
                 # required parameters
                 input_path=input_directory,
@@ -1185,7 +1220,9 @@ It\'s also highly recommended for you to attach the [log file]({}) under the pro
 
                 # optional parameters
                 driver=AVAILABLE_DRIVERS[self.driver_combo_box.currentText()],
-                scale_ratio=self.scale_ratio_double_spin_box.value(),
+                scale_ratio=scale_ratio,
+                scale_width=scale_width,
+                scale_height=scale_height,
                 processes=self.processes_spin_box.value(),
                 video2x_cache_directory=pathlib.Path(os.path.expandvars(self.cache_line_edit.text())),
                 extracted_frame_format=self.config['video2x']['extracted_frame_format'].lower(),

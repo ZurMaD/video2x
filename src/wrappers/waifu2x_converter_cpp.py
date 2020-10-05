@@ -4,7 +4,7 @@
 Name: Waifu2x Converter CPP Driver
 Author: K4YT3X
 Date Created: February 8, 2019
-Last Modified: June 13, 2020
+Last Modified: September 9, 2020
 
 Description: This class is a high-level wrapper
 for waifu2x-converter-cpp.
@@ -14,7 +14,6 @@ for waifu2x-converter-cpp.
 import argparse
 import os
 import pathlib
-import shlex
 import subprocess
 import threading
 
@@ -67,9 +66,12 @@ class WrapperMain:
         return parser.parse_args(arguments)
 
     def load_configurations(self, upscaler):
-        self.driver_settings['scale-ratio'] = upscaler.scale_ratio
+        # self.driver_settings['scale-ratio'] = upscaler.scale_ratio
         self.driver_settings['jobs'] = upscaler.processes
         self.driver_settings['output-format'] = upscaler.extracted_frame_format.lower()
+
+    def set_scale_ratio(self, scale_ratio: float):
+        self.driver_settings['scale-ratio'] = scale_ratio
 
     def upscale(self, input_directory, output_directory):
         """ Waifu2x Converter Driver Upscaler
@@ -118,6 +120,6 @@ class WrapperMain:
 
         # return the Popen object of the new process created
         self.print_lock.acquire()
-        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {" ".join(execute)}')
         self.print_lock.release()
         return subprocess.Popen(execute)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>756</width>
-    <height>954</height>
+    <width>737</width>
+    <height>1020</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -40,8 +40,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>744</width>
-         <height>696</height>
+         <width>725</width>
+         <height>762</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_36">
@@ -378,17 +378,17 @@
                      </property>
                      <item>
                       <property name="text">
+                       <string>Waifu2X NCNN Vulkan</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
                        <string>Waifu2X Caffe</string>
                       </property>
                      </item>
                      <item>
                       <property name="text">
                        <string>Waifu2X Converter CPP</string>
-                      </property>
-                     </item>
-                     <item>
-                      <property name="text">
-                       <string>Waifu2X NCNN Vulkan</string>
                       </property>
                      </item>
                      <item>
@@ -462,6 +462,42 @@
                   </layout>
                  </item>
                  <item>
+                  <layout class="QHBoxLayout" name="outputWidthHorizontalLayout">
+                   <item>
+                    <widget class="QLabel" name="outputWidthLabel">
+                     <property name="text">
+                      <string>Output Width</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QSpinBox" name="outputWidthSpinBox">
+                     <property name="maximum">
+                      <number>99999</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="outputHeightHorizontalLayout">
+                   <item>
+                    <widget class="QLabel" name="outputHeightLabel">
+                     <property name="text">
+                      <string>Output Height</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QSpinBox" name="outputHeightSpinBox">
+                     <property name="maximum">
+                      <number>99999</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
                   <layout class="QHBoxLayout" name="imageOutputExtensionHorizontalLayout">
                    <item>
                     <widget class="QLabel" name="imageOutputExtensionLabel">
@@ -522,13 +558,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QCheckBox" name="disableLoggingCheckBox">
-                   <property name="text">
-                    <string>Disable Logging</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -542,6 +571,22 @@
                   <layout class="QHBoxLayout" name="framPreviewHorizontalLayout">
                    <item>
                     <layout class="QVBoxLayout" name="framePreviewOptionsVerticalLayout">
+                     <item>
+                      <widget class="QLabel" name="framePreviewLabel">
+                       <property name="frameShape">
+                        <enum>QFrame::StyledPanel</enum>
+                       </property>
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="scaledContents">
+                        <bool>false</bool>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
                      <item>
                       <widget class="QCheckBox" name="framePreviewShowPreviewCheckBox">
                        <property name="text">
@@ -562,33 +607,7 @@
                        </property>
                       </widget>
                      </item>
-                     <item>
-                      <spacer name="framePreviewOptionsVerticalSpacer">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>20</width>
-                         <height>40</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
                     </layout>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="framePreviewLabel">
-                     <property name="frameShape">
-                      <enum>QFrame::StyledPanel</enum>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                     <property name="scaledContents">
-                      <bool>false</bool>
-                     </property>
-                    </widget>
                    </item>
                   </layout>
                  </item>
@@ -623,48 +642,6 @@
                    <widget class="QPushButton" name="waifu2xCaffePathSelectButton">
                     <property name="text">
                      <string>Select Binary Path</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item>
-                 <layout class="QHBoxLayout" name="waifu2xCaffeScaleWidthHorizontalLayout">
-                  <item>
-                   <widget class="QLabel" name="waifu2xCaffeScaleWidthLabel">
-                    <property name="text">
-                     <string>Scale Width</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QSpinBox" name="waifu2xCaffeScaleWidthSpinBox">
-                    <property name="toolTip">
-                     <string>custom scale width (specifying this will overwrite scale_ratio)</string>
-                    </property>
-                    <property name="maximum">
-                     <number>999999</number>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item>
-                 <layout class="QHBoxLayout" name="waifu2xCaffeScaleHeightHorizontalLayout">
-                  <item>
-                   <widget class="QLabel" name="waifu2xCaffeScaleHeightLabel">
-                    <property name="text">
-                     <string>Scale Height</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QSpinBox" name="waifu2xCaffeScaleHeightSpinBox">
-                    <property name="toolTip">
-                     <string>custom scale height (specifying this will overwrite scale_ratio)</string>
-                    </property>
-                    <property name="maximum">
-                     <number>999999</number>
                     </property>
                    </widget>
                   </item>
@@ -1804,6 +1781,27 @@
                      </property>
                     </widget>
                    </item>
+                   <item>
+                    <widget class="QCheckBox" name="anime4kCppHdnCheckBox">
+                     <property name="text">
+                      <string>HDN</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QCheckBox" name="anime4kCppDisableProgressCheckBox">
+                     <property name="text">
+                      <string>Disable Progress</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QCheckBox" name="anime4kCppAlphaCheckBox">
+                     <property name="text">
+                      <string>Preserve Alpha Channel</string>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -1941,6 +1939,38 @@
                    </size>
                   </property>
                  </spacer>
+                </item>
+                <item row="8" column="0">
+                 <layout class="QHBoxLayout" name="anime4kCppHdnLevelHorizontalLayout">
+                  <item>
+                   <widget class="QLabel" name="anime4kCppHdnLevelLabel">
+                    <property name="text">
+                     <string>HDN Level</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QSpinBox" name="anime4kCppHdnLevelSpinBox">
+                    <property name="value">
+                     <number>1</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item row="8" column="1">
+                 <layout class="QHBoxLayout" name="anime4kCppForceFpsHorizontalLayout">
+                  <item>
+                   <widget class="QLabel" name="anime4kCppForceFpsLabel">
+                    <property name="text">
+                     <string>Force FPS</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="anime4kCppForceFpsDoubleSpinBox"/>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </widget>
@@ -2592,42 +2622,6 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="gifskiWidthHorizontalLayout">
-              <item>
-               <widget class="QLabel" name="gifskiWidthLabel">
-                <property name="text">
-                 <string>Width</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSpinBox" name="gifskiWidthSpinBox">
-                <property name="maximum">
-                 <number>99999</number>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="gifskiHeightHorizontalLayout">
-              <item>
-               <widget class="QLabel" name="gifskiHeightLabel">
-                <property name="text">
-                 <string>Height</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSpinBox" name="gifskiHeightSpinBox">
-                <property name="maximum">
-                 <number>99999</number>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gifskiSwitchesGroupBox">
               <property name="title">
                <string>Switches</string>
@@ -2707,9 +2701,9 @@
      </widget>
     </item>
     <item>
-     <widget class="QGroupBox" name="currentVideoProcessingProgressGroupBox">
+     <widget class="QGroupBox" name="currentProcessingProgressGroupBox">
       <property name="title">
-       <string>Current Video Processing Progress</string>
+       <string>Current Processing Progress</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_11">
        <item>
@@ -2801,9 +2795,9 @@
      </widget>
     </item>
     <item>
-     <widget class="QGroupBox" name="overallVideoProcessingProgressGroupBox">
+     <widget class="QGroupBox" name="overallProcessingProgressGroupBox">
       <property name="title">
-       <string>Overall Video Processing Progress</string>
+       <string>Overall Processing Progress</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_13">
        <item>
@@ -2893,7 +2887,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>756</width>
+     <width>737</width>
      <height>21</height>
     </rect>
    </property>

@@ -4,7 +4,7 @@
 Name: Waifu2x Caffe Driver
 Author: K4YT3X
 Date Created: Feb 24, 2018
-Last Modified: June 7, 2020
+Last Modified: September 12, 2020
 
 Description: This class is a high-level wrapper
 for waifu2x-caffe.
@@ -14,7 +14,6 @@ for waifu2x-caffe.
 import argparse
 import os
 import pathlib
-import shlex
 import subprocess
 import threading
 
@@ -63,12 +62,22 @@ class WrapperMain:
 
     def load_configurations(self, upscaler):
         # use scale width and scale height if specified
-        self.driver_settings['scale_ratio'] = upscaler.scale_ratio
+        # self.driver_settings['scale_ratio'] = upscaler.scale_ratio
         self.driver_settings['output_extention'] = upscaler.extracted_frame_format
 
         # bit_depth will be 12 at this point
         # it will up updated later
         self.driver_settings['output_depth'] = 12
+
+    def set_scale_resolution(self, width: int, height: int):
+        self.driver_settings['scale_width'] = width
+        self.driver_settings['scale_height'] = height
+        self.driver_settings['scale_ratio'] = None
+
+    def set_scale_ratio(self, scale_ratio: float):
+        self.driver_settings['scale_width'] = None
+        self.driver_settings['scale_height'] = None
+        self.driver_settings['scale_ratio'] = scale_ratio
 
     def upscale(self, input_directory, output_directory):
         """ start upscaling process
@@ -105,6 +114,6 @@ class WrapperMain:
 
         # return the Popen object of the new process created
         self.print_lock.acquire()
-        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {" ".join(execute)}')
         self.print_lock.release()
         return subprocess.Popen(execute)

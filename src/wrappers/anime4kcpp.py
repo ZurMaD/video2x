@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Name: Waifu2x Caffe Driver
+Name: Anime4KCPP Driver
 Author: K4YT3X
 Date Created: May 3, 2020
-Last Modified: May 11, 2020
+Last Modified: September 9, 2020
 
 Description: This class is a high-level wrapper
-for waifu2x-caffe.
+for Anime4KCPP.
 """
 
 # built-in imports
@@ -15,7 +15,6 @@ import argparse
 import os
 import pathlib
 import platform
-import shlex
 import subprocess
 import threading
 
@@ -60,19 +59,28 @@ class WrapperMain:
         parser.add_argument('-e', '--postFilters', type=int, help='Enhancement filter, only working when postProcessing is true,there are 5 options by binary:Median blur=0000001, Mean blur=0000010, CAS Sharpening=0000100, Gaussian blur weak=0001000, Gaussian blur=0010000, Bilateral filter=0100000, Bilateral filter faster=1000000, you can freely combine them, eg: Gaussian blur weak + Bilateral filter = 0001000 | 0100000 = 0101000 = 40(D), so you can put 40 to enable Gaussian blur weak and Bilateral filter, which also is what I recommend for image that < 1080P, 48 for image that >= 1080P, and for performance I recommend to use 72 for video that < 1080P, 80 for video that >=1080P')
         parser.add_argument('-q', '--GPUMode', action='store_true', help='Enable GPU acceleration')
         parser.add_argument('-w', '--CNNMode', action='store_true', help='Enable ACNet')
+        parser.add_argument('-H', '--HDN', action='store_true', help='Enable HDN mode for ACNet')
+        parser.add_argument('-L', '--HDNLevel', type=int, help='Set HDN level')
         parser.add_argument('-l', '--listGPUs', action='store_true', help='list GPUs')
         parser.add_argument('-h', '--platformID', type=int, help='Specify the platform ID')
         parser.add_argument('-d', '--deviceID', type=int, help='Specify the device ID')
         parser.add_argument('-C', '--codec', type=str, help='Specify the codec for encoding from mp4v(recommended in Windows), dxva(for Windows), avc1(H264, recommended in Linux), vp09(very slow), hevc(not support in Windowds), av01(not support in Windowds) (string [=mp4v])')
+        parser.add_argument('-F', '--forceFps', type=float, help='Set output video fps to the specifying number, 0 to disable')
+        parser.add_argument('-D', '--disableProgress', action='store_true', help='disable progress display')
+        parser.add_argument('-W', '--webVideo', type=str, help='process the video from URL')
+        parser.add_argument('-A', '--alpha', action='store_true', help='preserve the Alpha channel for transparent image')
         return parser.parse_args(arguments)
 
     def load_configurations(self, upscaler):
-        self.driver_settings['zoomFactor'] = upscaler.scale_ratio
+        # self.driver_settings['zoomFactor'] = upscaler.scale_ratio
         self.driver_settings['threads'] = upscaler.processes
 
         # append FFmpeg path to the end of PATH
         # Anime4KCPP will then use FFmpeg to migrate audio tracks
         os.environ['PATH'] += f';{upscaler.ffmpeg_settings["ffmpeg_path"]}'
+
+    def set_scale_ratio(self, scale_ratio: float):
+        self.driver_settings['zoomFactor'] = scale_ratio
 
     def upscale(self, input_file, output_file):
         """This is the core function for WAIFU2X class
@@ -120,6 +128,6 @@ class WrapperMain:
 
         # return the Popen object of the new process created
         self.print_lock.acquire()
-        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {" ".join(execute)}')
         self.print_lock.release()
         return subprocess.Popen(execute)

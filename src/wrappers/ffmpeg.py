@@ -4,7 +4,7 @@
 Name: Video2X FFmpeg Controller
 Author: K4YT3X
 Date Created: Feb 24, 2018
-Last Modified: June 7, 2020
+Last Modified: September 13, 2020
 
 Description: This class handles all FFmpeg related operations.
 """
@@ -12,7 +12,6 @@ Description: This class handles all FFmpeg related operations.
 # built-in imports
 import json
 import pathlib
-import shlex
 import subprocess
 
 # third-party imports
@@ -58,7 +57,7 @@ class Ffmpeg:
         # turn elements into str
         execute = [str(e) for e in execute]
 
-        Avalon.debug_info(f'Executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'Executing: {" ".join(execute)}')
 
         # initialize dictionary to store pixel formats
         pixel_formats = {}
@@ -66,7 +65,7 @@ class Ffmpeg:
         # record all pixel formats into dictionary
         for line in subprocess.run(execute, check=True, stdout=subprocess.PIPE).stdout.decode().split('\n'):
             try:
-                pixel_formats[' '.join(line.split()).split()[1]] = int(' '.join(line.split()).split()[3])
+                pixel_formats[" ".join(line.split()).split()[1]] = int(" ".join(line.split()).split()[3])
             except (IndexError, ValueError):
                 pass
 
@@ -74,6 +73,37 @@ class Ffmpeg:
         Avalon.debug_info(str(pixel_formats))
 
         return pixel_formats
+
+    def get_number_of_frames(self, input_file: str, video_stream_index: int) -> int:
+        """ Count the number of frames in a video
+
+        Args:
+            input_file (str): input file path
+            video_stream_index (int): index number of the video stream
+
+        Returns:
+            int: number of frames in the video
+        """
+
+        execute = [
+            self.ffmpeg_probe_binary,
+            '-v',
+            'quiet',
+            '-count_frames',
+            '-select_streams',
+            f'v:{video_stream_index}',
+            '-show_entries',
+            'stream=nb_read_frames',
+            '-of',
+            'default=nokey=1:noprint_wrappers=1',
+            input_file
+        ]
+
+        # turn elements into str
+        execute = [str(e) for e in execute]
+
+        Avalon.debug_info(f'Executing: {" ".join(execute)}')
+        return int(subprocess.run(execute, check=True, stdout=subprocess.PIPE).stdout.decode().strip())
 
     def probe_file_info(self, input_video):
         """ Gets input video information
@@ -105,7 +135,7 @@ class Ffmpeg:
         # turn elements into str
         execute = [str(e) for e in execute]
 
-        Avalon.debug_info(f'Executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'Executing: {" ".join(execute)}')
         json_str = subprocess.run(execute, check=True, stdout=subprocess.PIPE).stdout
         return json.loads(json_str.decode('utf-8'))
 
@@ -134,6 +164,7 @@ class Ffmpeg:
         # specify output file
         execute.extend([
             extracted_frames / f'extracted_%0d.{self.extracted_frame_format}'
+            # extracted_frames / f'frame_%06d.{self.extracted_frame_format}'
         ])
 
         return(self._execute(execute))
@@ -175,6 +206,7 @@ class Ffmpeg:
         execute.extend([
             '-i',
             upscaled_frames / f'extracted_%d.{self.extracted_frame_format}'
+            # upscaled_frames / f'%06d.{self.extracted_frame_format}'
         ])
 
         # read FFmpeg output options
@@ -283,5 +315,5 @@ class Ffmpeg:
     def _execute(self, execute):
         # turn all list elements into string to avoid errors
         execute = [str(e) for e in execute]
-        Avalon.debug_info(f'Executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'Executing: {" ".join(execute)}')
         return subprocess.Popen(execute)

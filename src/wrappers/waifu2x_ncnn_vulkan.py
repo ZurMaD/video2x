@@ -7,7 +7,7 @@ Date Created: June 26, 2019
 Last Modified: May 11, 2020
 
 Editor: K4YT3X
-Last Modified: February 22, 2020
+Last Modified: September 21, 2020
 
 Description: This class is a high-level wrapper
 for waifu2x_ncnn_vulkan.
@@ -18,7 +18,6 @@ import argparse
 import os
 import pathlib
 import platform
-import shlex
 import subprocess
 import threading
 
@@ -45,23 +44,28 @@ class WrapperMain:
         parser.error = lambda message: (_ for _ in ()).throw(AttributeError(message))
         parser.add_argument('--help', action='help', help='show this help message and exit')
         parser.add_argument('-v', action='store_true', help='verbose output')
-        parser.add_argument('-i', type=str, help=argparse.SUPPRESS)  # help='input image path (jpg/png) or directory')
-        parser.add_argument('-o', type=str, help=argparse.SUPPRESS)  # help='output image path (png) or directory')
+        parser.add_argument('-i', type=str, help=argparse.SUPPRESS)  # help='input image path (jpg/png/webp) or directory')
+        parser.add_argument('-o', type=str, help=argparse.SUPPRESS)  # help='output image path (jpg/png/webp) or directory')
         parser.add_argument('-n', type=int, choices=range(-1, 4), help='denoise level')
-        parser.add_argument('-s', type=int, choices=range(1, 3), help='upscale ratio')
+        parser.add_argument('-s', type=int, help='upscale ratio')
         parser.add_argument('-t', type=int, help='tile size (>=32)')
         parser.add_argument('-m', type=str, help='waifu2x model path')
         parser.add_argument('-g', type=int, help='gpu device to use')
         parser.add_argument('-j', type=str, help='thread count for load/proc/save')
         parser.add_argument('-x', action='store_true', help='enable tta mode')
+        parser.add_argument('-f', type=str, help=argparse.SUPPRESS)  # help='output image format (jpg/png/webp, default=ext/png)')
         return parser.parse_args(arguments)
 
     def load_configurations(self, upscaler):
-        self.driver_settings['s'] = int(upscaler.scale_ratio)
+        # self.driver_settings['s'] = int(upscaler.scale_ratio)
         self.driver_settings['j'] = '{}:{}:{}'.format(upscaler.processes, upscaler.processes, upscaler.processes)
+        self.driver_settings['f'] = upscaler.extracted_frame_format.lower()
+
+    def set_scale_ratio(self, scale_ratio: int):
+        self.driver_settings['s'] = int(scale_ratio)
 
     def upscale(self, input_directory, output_directory):
-        """This is the core function for WAIFU2X class
+        """ This is the core function for waifu2x class
 
         Arguments:
             input_directory {string} -- source directory path
@@ -105,6 +109,6 @@ class WrapperMain:
 
         # return the Popen object of the new process created
         self.print_lock.acquire()
-        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {shlex.join(execute)}')
+        Avalon.debug_info(f'[upscaler] Subprocess {os.getpid()} executing: {" ".join(execute)}')
         self.print_lock.release()
         return subprocess.Popen(execute)
